@@ -38,3 +38,9 @@ console.log(encontrar)
 personas.forEach(persona => {
   console.log(persona.nombre + " y su edad es de " + persona.edad + " años");
 });
+
+const totalEdades = personas.reduce((acumulador, persona) => {
+  return acumulador + persona.edad;
+}, 0);
+
+console.log("La suma total de las edades es:", totalEdades);
