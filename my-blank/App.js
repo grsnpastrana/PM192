@@ -8,7 +8,9 @@ import React, {useState} from 'react';
 const Texto=()=>{
   const[contenido, setContenido]=useState('hola mundo React')
   const actualizarTexto=()=>{setContenido('estado actualizado')}
-  return(<Text onPress={actualizarTexto}>{contenido}</Text>) 
+  return(
+  <Text style={styles.Text}onPress={actualizarTexto}>{contenido}</Text>
+) 
 }
 
 /* zona 2 , el main*/
@@ -32,5 +34,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  }, 
+  Text:{
+    color:'red',
+    fontSize:25,
   },
 });
