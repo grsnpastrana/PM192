@@ -1,44 +1,37 @@
 /* Zone 1: Importaciones */
-import { ImageBackground, StyleSheet, Text, View, SafeAreaView } from 'react-native';
+import { ImageBackground, StyleSheet, Text, TextInput, Button, Alert, View, SafeAreaView } from 'react-native';
 import React, { useState, useEffect } from 'react';
 
-const FondoBienvenida = () => {
-  return (
-    <ImageBackground
-      source={require('./assets/fondo.jpg')}
-      style={styles.fondo}
-    >
-      <View style={styles.contenido}>
-        <Text style={styles.titulo}>¡Bienvenido a la App!</Text>
-      </View>
-    </ImageBackground>
-  );
-};
+
 
 /* Zone 2: Main */
 
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [nombre, setNombre] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);  // Ocultar splash después de 3 segundos
-    }, 3000);
+  const mostrarAlerta=()=>{
+    if (nombre.trim()===''){
+      Alert.alert('error, por favor escribe algo ');
+      alert('Escribe algo')
+    } else {
+      Alert.alert('Bienvenido', `hola ${nombre}, bienvnido a nuestra app`);
+      alert('hola'+ nombre+ 'bienvenido');
 
-    return () => clearTimeout(timer); // Limpiar timer al desmontar
-  }, []);
+    }
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {showSplash ? (
-        <FondoBienvenida />
-      ) : (
-        <View style={styles.mainContent}>
-          <Text style={styles.mainText}>Esta es la pantalla principal</Text>
-          {/* Aquí va el resto de la app después del splash */}
-        </View>
-      )}
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.text}>Ingresa tu nombre</Text>
+      <TextInput style={styles.input}
+      placeholder='Escribe tu nombre'
+      onChangeText={setNombre}
+      value={nombre}
+      ></TextInput>
+
+      <Button title='Enviar'onPress={mostrarAlerta}></Button>
+
+    </View>
   );
 }
 
@@ -46,28 +39,20 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent:'center',
+    padding:20,
+    backgroundColor:'white'
   },
-  fondo: {
-    flex: 1,
+  text:{
+    fontSize:18,
+    marginBottom:20,
+    color:'#000',
   },
-  contenido: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  titulo: {
-    fontSize: 28,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  mainContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mainText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  input:{
+    borderWidth: 1,
+    borderColor:'#ccc',
+    padding: 10,
+    marginBottom:20,
+  }
+
 });
