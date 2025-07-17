@@ -1,150 +1,220 @@
-// RegistroUsuario.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Switch,
-  Alert,
-  ImageBackground,
-  Image,
   ScrollView,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 
-export default function RegistroUsuario() {
-  const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+const API_KEY = "TU_API_KEY_AQUÍ"; // Pon aquí tu API key real
 
-  const manejarRegistro = () => {
-    if (!nombre.trim() || !correo.trim()) {
-      Alert.alert("Error", "Todos los campos son obligatorios.");
+export default function App() {
+  const [city, setCity] = useState("");
+  const [weatherData, setWeatherData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  // Buscar ciudades para sugerencias desde API geocoding
+  const fetchCitySuggestions = async (query) => {
+    if (!query) {
+      setSuggestions([]);
       return;
     }
-
-    if (!aceptaTerminos) {
-      Alert.alert("Error", "Debes aceptar los términos y condiciones.");
-      return;
+    setLoadingSuggestions(true);
+    try {
+      const response = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${API_KEY}`
+      );
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setSuggestions(
+          data.map((item) => ({
+            name: item.name,
+            country: item.country,
+            lat: item.lat,
+            lon: item.lon,
+          }))
+        );
+      } else {
+        setSuggestions([]);
+      }
+    } catch (error) {
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
     }
+  };
 
-    Alert.alert("Registro exitoso", `Nombre: ${nombre}\nCorreo: ${correo}`);
+  // Maneja cambio en input, llama sugerencias dinámicas
+  const onCityChange = (text) => {
+    setCity(text);
+    fetchCitySuggestions(text);
+  };
+
+  // Cuando selecciona ciudad de la lista, carga clima
+  const handleCitySelection = async (cityName, country, lat, lon) => {
+    setSuggestions([]);
+    setCity("");
+
+    setLoading(true);
+    try {
+      // Usamos lat/lon para evitar ambigüedad y búsquedas erróneas
+      const response = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=es`
+      );
+      const data = await response.json();
+
+      if (data.cod !== 200) {
+        Alert.alert("Error", data.message || "Ciudad no encontrada.");
+      } else {
+        const newCity = {
+          id: data.id,
+          name: data.name,
+          country: country,
+          temp: data.main.temp,
+          condition: data.weather[0].description,
+          icon: data.weather[0].icon,
+        };
+
+        const exists = weatherData.some((item) => item.id === newCity.id);
+        if (exists) {
+          Alert.alert("Duplicado", "Ya agregaste esta ciudad.");
+        } else {
+          setWeatherData([...weatherData, newCity]);
+        }
+      }
+    } catch (error) {
+      Alert.alert("Error", "No se pudo conectar al servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Eliminar ciudad de la lista
+  const deleteCity = (id) => {
+    setWeatherData((prev) => prev.filter((item) => item.id !== id));
   };
 
   return (
-        <ImageBackground
-          source={require('./assets/fondo.jpg')}
-          style={estilos.fondo}
-          resizeMode="cover"
-        >
+    <View style={styles.container}>
+      <Text style={styles.title}>Clima por Ciudad</Text>
 
-      <ScrollView contentContainerStyle={estilos.scroll}>
-        <View style={estilos.container}>
-          {/* Logo */}
-          <Image
-            source={require('./assets/fondo.jpg')}
-            style={estilos.logo}
-          />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Escribe una ciudad"
+          value={city}
+          onChangeText={onCityChange}
+          autoCorrect={false}
+        />
+      </View>
 
-          <Text style={estilos.titulo}>Registro de Usuario</Text>
+      {loadingSuggestions && <ActivityIndicator size="small" color="#0000ff" />}
 
-          {/* Campos */}
-          <TextInput
-            placeholder="Nombre completo"
-            style={estilos.input}
-            value={nombre}
-            onChangeText={setNombre}
-            placeholderTextColor="#6b7280"
-          />
-          <TextInput
-            placeholder="Correo electrónico"
-            style={estilos.input}
-            value={correo}
-            onChangeText={setCorreo}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor="#6b7280"
-          />
+      {suggestions.length > 0 && (
+        <ScrollView style={styles.suggestions}>
+          {suggestions.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.suggestionItem}
+              onPress={() =>
+                handleCitySelection(item.name, item.country, item.lat, item.lon)
+              }
+            >
+              <Text>
+                {item.name}, {item.country}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-          {/* Switch de términos */}
-          <View style={estilos.switchContainer}>
-            <Switch
-              value={aceptaTerminos}
-              onValueChange={setAceptaTerminos}
-              thumbColor={aceptaTerminos ? "#00996b" : "#ccc"}
-            />
-            <Text style={estilos.switchTexto}>
-              Acepto los términos y condiciones
-            </Text>
+      {loading && <ActivityIndicator size="large" color="#0000ff" />}
+
+      <ScrollView style={{ marginTop: 10 }}>
+        {weatherData.map((item) => (
+          <View key={item.id} style={styles.card}>
+            <View style={styles.cardInfo}>
+              <View>
+                <Text style={styles.cityName}>
+                  {item.name}, {item.country}
+                </Text>
+                <Text>
+                  {item.temp}°C - {item.condition}
+                </Text>
+              </View>
+              <Image
+                source={{
+                  uri: `https://openweathermap.org/img/wn/${item.icon}@2x.png`,
+                }}
+                style={styles.icon}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => deleteCity(item.id)}
+            >
+              <Text style={{ color: "white" }}>Eliminar</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Botón */}
-          <TouchableOpacity style={estilos.boton} onPress={manejarRegistro}>
-            <Text style={estilos.textoBoton}>Registrarse</Text>
-          </TouchableOpacity>
-        </View>
+        ))}
       </ScrollView>
-    </ImageBackground>
+    </View>
   );
 }
 
-const estilos = StyleSheet.create({
-  fondo: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  container: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  titulo: {
-    fontSize: 20,
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, marginTop: 50 },
+  title: {
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#0f172a",
+    marginBottom: 20,
     textAlign: "center",
-    marginBottom: 24,
   },
+  inputContainer: { marginBottom: 10 },
   input: {
     borderWidth: 1,
-    borderColor: "#94a3b8",
-    backgroundColor: "#f8fafc",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    color: "#0f172a",
+    borderColor: "#aaa",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    height: 40,
   },
-  switchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 12,
-    gap: 8,
+  suggestions: {
+    maxHeight: 150,
+    backgroundColor: "#eee",
+    borderRadius: 5,
+    marginBottom: 10,
   },
-  switchTexto: {
-    color: "#334155",
-    flex: 1,
+  suggestionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
   },
-  boton: {
-    backgroundColor: "#00996b",
-    padding: 14,
+  card: {
+    backgroundColor: "#f0f0f0",
     borderRadius: 10,
-    alignItems: "center",
-    marginTop: 12,
+    padding: 15,
+    marginBottom: 10,
   },
-  textoBoton: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+  cardInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cityName: { fontSize: 18, fontWeight: "bold" },
+  icon: { width: 50, height: 50 },
+  deleteButton: {
+    backgroundColor: "#E53935",
+    marginTop: 10,
+    padding: 8,
+    borderRadius: 5,
+    alignItems: "center",
   },
 });
