@@ -1,220 +1,182 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Image,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-
-const API_KEY = "TU_API_KEY_AQUÍ"; // Pon aquí tu API key real
+import React, { useState } from 'react';
+import { Modal, View, Text, Button, TextInput, StyleSheet } from 'react-native';
 
 export default function App() {
-  const [city, setCity] = useState("");
-  const [weatherData, setWeatherData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [confirmacionVisible, setConfirmacionVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [mensajeError, setMensajeError] = useState('');
 
-  // Buscar ciudades para sugerencias desde API geocoding
-  const fetchCitySuggestions = async (query) => {
-    if (!query) {
-      setSuggestions([]);
-      return;
+  const [nombre, setNombre] = useState('');
+  const [correo, setCorreo] = useState('');
+
+  const guardarDatos = () => {
+    if (nombre.trim() === '' && correo.trim() === '') {
+      setMensajeError('Faltan el nombre y el correo');
+      setErrorVisible(true);
+    } else if (nombre.trim() === '') {
+      setMensajeError('Falta el nombre');
+      setErrorVisible(true);
+    } else if (correo.trim() === '') {
+      setMensajeError('Falta el correo');
+      setErrorVisible(true);
+    } else {
+      setModalVisible(false);
+      setConfirmacionVisible(true);
+      setNombre('');
+      setCorreo('');
     }
-    setLoadingSuggestions(true);
-    try {
-      const response = await fetch(
-        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${API_KEY}`
-      );
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setSuggestions(
-          data.map((item) => ({
-            name: item.name,
-            country: item.country,
-            lat: item.lat,
-            lon: item.lon,
-          }))
-        );
-      } else {
-        setSuggestions([]);
-      }
-    } catch (error) {
-      setSuggestions([]);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
-  // Maneja cambio en input, llama sugerencias dinámicas
-  const onCityChange = (text) => {
-    setCity(text);
-    fetchCitySuggestions(text);
-  };
-
-  // Cuando selecciona ciudad de la lista, carga clima
-  const handleCitySelection = async (cityName, country, lat, lon) => {
-    setSuggestions([]);
-    setCity("");
-
-    setLoading(true);
-    try {
-      // Usamos lat/lon para evitar ambigüedad y búsquedas erróneas
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=es`
-      );
-      const data = await response.json();
-
-      if (data.cod !== 200) {
-        Alert.alert("Error", data.message || "Ciudad no encontrada.");
-      } else {
-        const newCity = {
-          id: data.id,
-          name: data.name,
-          country: country,
-          temp: data.main.temp,
-          condition: data.weather[0].description,
-          icon: data.weather[0].icon,
-        };
-
-        const exists = weatherData.some((item) => item.id === newCity.id);
-        if (exists) {
-          Alert.alert("Duplicado", "Ya agregaste esta ciudad.");
-        } else {
-          setWeatherData([...weatherData, newCity]);
-        }
-      }
-    } catch (error) {
-      Alert.alert("Error", "No se pudo conectar al servidor.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Eliminar ciudad de la lista
-  const deleteCity = (id) => {
-    setWeatherData((prev) => prev.filter((item) => item.id !== id));
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Clima por Ciudad</Text>
+      <Text style={styles.title}>Formulario en Modal</Text>
+      <Button title="Abrir Formulario" onPress={() => setModalVisible(true)} />
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Escribe una ciudad"
-          value={city}
-          onChangeText={onCityChange}
-          autoCorrect={false}
-        />
-      </View>
-
-      {loadingSuggestions && <ActivityIndicator size="small" color="#0000ff" />}
-
-      {suggestions.length > 0 && (
-        <ScrollView style={styles.suggestions}>
-          {suggestions.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.suggestionItem}
-              onPress={() =>
-                handleCitySelection(item.name, item.country, item.lat, item.lon)
-              }
-            >
-              <Text>
-                {item.name}, {item.country}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {loading && <ActivityIndicator size="large" color="#0000ff" />}
-
-      <ScrollView style={{ marginTop: 10 }}>
-        {weatherData.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardInfo}>
-              <View>
-                <Text style={styles.cityName}>
-                  {item.name}, {item.country}
-                </Text>
-                <Text>
-                  {item.temp}°C - {item.condition}
-                </Text>
-              </View>
-              <Image
-                source={{
-                  uri: `https://openweathermap.org/img/wn/${item.icon}@2x.png`,
-                }}
-                style={styles.icon}
-              />
+      {/* Modal del Formulario */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Ingresa tus datos</Text>
+            <TextInput
+              placeholder="Nombre"
+              style={styles.input}
+              value={nombre}
+              onChangeText={setNombre}
+            />
+            <TextInput
+              placeholder="Correo"
+              style={styles.input}
+              keyboardType="email-address"
+              value={correo}
+              onChangeText={setCorreo}
+            />
+            <View style={styles.buttonRow}>
+              <Button title="GUARDAR" onPress={guardarDatos} />
+              <Button title="CANCELAR" onPress={() => setModalVisible(false)} />
             </View>
-
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => deleteCity(item.id)}
-            >
-              <Text style={{ color: "white" }}>Eliminar</Text>
-            </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmación */}
+      <Modal
+        visible={confirmacionVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmacionVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>✅ ¡Datos guardados correctamente!</Text>
+            <Button title="CERRAR" onPress={() => setConfirmacionVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Error */}
+      <Modal
+        visible={errorVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setErrorVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>⚠ Error</Text>
+            <Text style={styles.errorMessage}>{mensajeError}</Text>
+            <Button title="OK" onPress={() => setErrorVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
+// Estilos
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, marginTop: 50 },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE'
+  },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: "center",
+    fontWeight: 'bold',
+    color: '#1D4ED8'
   },
-  inputContainer: { marginBottom: 10 },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    padding: 25,
+    borderRadius: 20,
+    width: '75%',
+    maxWidth: 400,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 }
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#1E3A8A'
+  },
   input: {
+    borderColor: '#CBD5E1',
     borderWidth: 1,
-    borderColor: "#aaa",
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  suggestions: {
-    maxHeight: 150,
-    backgroundColor: "#eee",
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  suggestionItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  card: {
-    backgroundColor: "#f0f0f0",
     borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    height: 45,
+    fontSize: 16,
+    backgroundColor: '#F8FAFC'
   },
-  cardInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10
   },
-  cityName: { fontSize: 18, fontWeight: "bold" },
-  icon: { width: 50, height: 50 },
-  deleteButton: {
-    backgroundColor: "#E53935",
-    marginTop: 10,
-    padding: 8,
-    borderRadius: 5,
-    alignItems: "center",
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#DC2626',
+    borderWidth: 2,
+    padding: 25,
+    borderRadius: 20,
+    width: '75%',
+    maxWidth: 400,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 }
   },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#B91C1C',
+    textAlign: 'center',
+    marginBottom: 10
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    marginBottom: 15
+  }
 });
